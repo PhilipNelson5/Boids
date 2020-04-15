@@ -28,9 +28,19 @@ function rotate_vector(v, th) {
   return { x: v.x * cos_th - v.y * sin_th, y: v.x * sin_th + v.y * cos_th };
 }
 
+function linear_spaced_array(startValue, stopValue, cardinality) {
+  const arr = [];
+  const step = (stopValue - startValue) / (cardinality - 1);
+  for (let i = 0; i < cardinality; i++) {
+    arr.push(startValue + step * i);
+  }
+  return arr;
+}
+
 export default {
   random_vector,
   angle_between,
   cross_product,
   rotate_vector,
+  linear_spaced_array,
 };

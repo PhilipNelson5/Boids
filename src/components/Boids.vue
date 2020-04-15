@@ -1,11 +1,15 @@
 <template>
   <div>
-    <div>
-      <canvas width="1920" height="1080" ref="main_canvas" id="main_canvas" />
-    </div>
-    <div class="container">
-      <div class="item">
-        <label for="num_boids">number of boids</label>
+    <div class="box">
+      <div>
+        <canvas width="1920" height="1080" ref="main_canvas" id="main_canvas" />
+      </div>
+      <p class="right">
+        {{ (fps_hist.reduce((a, b) => a + b) / fps_hist.length).toFixed(0) }}
+        FPS
+      </p>
+      <div class="container">
+        <label for="num_boids">Number of Boids</label>
         <input
           id="num_boids"
           type="range"
@@ -16,9 +20,32 @@
           v-model="num_boids"
         />
         <p>{{ num_boids }}</p>
-      </div>
-      <div class="item">
-        <label for="field_of_view_deg">field of view (degrees)</label>
+        <label for="speed">Boid Speed</label>
+        <input
+          id="speed"
+          type="range"
+          min="0"
+          max="2"
+          step=".01"
+          class="slider"
+          v-model="speed"
+        />
+        <p>{{ speed }}</p>
+        <label for="size">Boid Size</label>
+        <input
+          id="size"
+          type="range"
+          min="1"
+          max="50"
+          step="1"
+          class="slider"
+          v-model="boid_size"
+        />
+        <p>{{ boid_size }}</p>
+        <div class="bar" />
+        <div class="bar" />
+        <div class="bar" />
+        <label for="field_of_view_deg">Field of View</label>
         <input
           id="field_of_view_deg"
           type="range"
@@ -28,10 +55,8 @@
           class="slider"
           v-model="field_of_view_deg"
         />
-        <p>{{ field_of_view_deg }}</p>
-      </div>
-      <div class="item">
-        <label for="vision_dist">vision distance</label>
+        <p>{{ field_of_view_deg }}°</p>
+        <label for="vision_dist">Vision Distance</label>
         <input
           id="vision_dist"
           type="range"
@@ -42,9 +67,7 @@
           v-model="vision_dist"
         />
         <p>{{ vision_dist }}</p>
-      </div>
-      <div class="item">
-        <label for="collision_dist">collision distance</label>
+        <label for="collision_dist">Collision Avoidance Distance</label>
         <input
           id="collision_dist"
           type="range"
@@ -55,10 +78,11 @@
           v-model="collision_dist"
         />
         <p>{{ collision_dist }}</p>
-      </div>
-      <div class="item">
+        <div class="bar" />
+        <div class="bar" />
+        <div class="bar" />
         <label for="collision_avoidance_strength"
-          >collision avoidance strength</label
+          >Collision Avoidance Strength</label
         >
         <input
           id="collision_avoidance_strength"
@@ -70,9 +94,7 @@
           v-model="collision_avoidance_strength"
         />
         <p>{{ collision_avoidance_strength }}</p>
-      </div>
-      <div class="item">
-        <label for="velocity_align_strength">velocity align strength</label>
+        <label for="velocity_align_strength">Velocity Alignment Strength</label>
         <input
           id="velocity_align_strength"
           type="range"
@@ -83,10 +105,8 @@
           v-model="velocity_align_strength"
         />
         <p>{{ velocity_align_strength }}</p>
-      </div>
-      <div class="item">
-        <label for="center_of_mass_align_strength"
-          >center of mass align strength</label
+        <label for="center_of_mass_align_strength">
+          Center of Mass Alignment Strength</label
         >
         <input
           id="center_of_mass_align_strength"
@@ -99,6 +119,8 @@
         />
         <p>{{ center_of_mass_align_strength }}</p>
       </div>
+      <label for="color">Background Color</label>
+      <input id="color" type="color" v-model="background_color" />
     </div>
   </div>
 </template>
@@ -110,6 +132,9 @@ export default {
   name: "Boids",
   data() {
     return {
+      background_color: "#cde2e2",
+      id: 0,
+      fps_hist: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       prevTime: performance.now(),
       canvas: null,
       context: null,
@@ -122,7 +147,8 @@ export default {
         ],
       },
       boids: [],
-      speed: 0.4,
+      boid_size: 10,
+      speed: 0.2,
       num_boids: 100,
       vision_dist: 100,
       field_of_view_deg: 120,
@@ -141,12 +167,41 @@ export default {
     clear() {
       this.context.save();
       this.context.setTransform(1, 0, 0, 1, 0, 0);
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      // this.context.fillStyle = "#ffecc7";
+      this.context.fillStyle = this.background_color;
+      this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.restore();
+    },
+    fillCircle(center, radius, color) {
+      this.context.beginPath();
+      this.context.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+      this.context.fillStyle = color;
+      this.context.fill();
     },
     drawCircle(center, radius, color) {
       this.context.beginPath();
       this.context.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+      this.context.lineWidth = 4;
+      this.context.strokeStyle = color;
+      this.context.stroke();
+    },
+    drawFOV(center, radius, forward, angle, color) {
+      const start =
+        Math.atan(forward.y / forward.x) - (forward.x < 0 ? Math.PI : 0);
+      this.context.beginPath();
+      this.context.moveTo(
+        center.x + forward.x * radius,
+        center.y + forward.y * radius
+      );
+      this.context.arc(center.x, center.y, radius, start, start + angle, false);
+      this.context.lineTo(center.x, center.y);
+      this.context.moveTo(
+        center.x + forward.x * radius,
+        center.y + forward.y * radius
+      );
+      this.context.arc(center.x, center.y, radius, start, start - angle, true);
+      this.context.lineTo(center.x, center.y);
+      this.context.lineWidth = 4;
       this.context.strokeStyle = color;
       this.context.stroke();
     },
@@ -155,18 +210,22 @@ export default {
       this.context.moveTo(p1.x, p1.y);
       this.context.lineTo(p2.x, p2.y);
       this.context.strokeStyle = "#ff0000";
+      this.context.lineWidth = 2;
       this.context.stroke();
     },
-    drawPrimative({ verts }) {
+    drawPrimative({ verts }, color) {
       this.context.beginPath();
       this.context.moveTo(verts[0].x, verts[0].y);
       for (let i = 1; i < verts.length; ++i) {
         this.context.lineTo(verts[i].x, verts[i].y);
       }
+      this.context.fillStyle = color;
       this.context.fill();
     },
     update(dt) {
-      for(const boid of this.boids) {
+      this.fps_hist.shift();
+      this.fps_hist.push((1 / dt) * 1000);
+      for (const boid of this.boids) {
         /* --------------- */
         /* update velocity */
         /* --------------- */
@@ -174,8 +233,8 @@ export default {
         // Collision Detection
         const seen = [];
         if (boid.debug) boid.seen = [];
-        for(const other of this.boids){
-          if (boid == other) continue;
+        for (const other of this.boids) {
+          if (boid.id == other.id) continue;
           const x = boid.pos.x - other.pos.x;
           const y = boid.pos.y - other.pos.y;
           const d = Math.sqrt(x * x + y * y);
@@ -186,17 +245,18 @@ export default {
             x: other.pos.x - boid.pos.x,
             y: other.pos.y - boid.pos.y,
           };
-          const th = maths.angle_between(other_v, boid.pos);
+          const th = maths.angle_between(other_v, boid.vel);
 
           // other boid was seen
           if (th > this.field_of_view) continue;
+          // if (boid.debug) boid.seen.push({ x: other.pos.x, y: other.pos.y });
           if (boid.debug) boid.seen.push(other.pos);
 
           seen.push({ other, other_v, th, d });
         }
 
         // Collision Avoidance
-        for(const { other_v, th, d } of seen){
+        for (const { other_v, th, d } of seen) {
           if (d > this.collision_dist) continue;
 
           if (maths.cross_product(other_v, boid.vel) < 0) {
@@ -216,7 +276,7 @@ export default {
         const com = { x: 0, y: 0 };
         if (seen.length > 0) {
           const vel_avg = { x: 0, y: 0 };
-          for(const {other} of seen){
+          for (const { other } of seen) {
             vel_avg.x += other.vel.x;
             vel_avg.y += other.vel.y;
             com.x += other.pos.x;
@@ -276,25 +336,41 @@ export default {
     },
     render() {
       this.clear();
-      for(const boid of this.boids){
+      for (const boid of this.boids) {
         const th =
           Math.atan(boid.vel.y / boid.vel.x) - (boid.vel.x < 0 ? Math.PI : 0);
         this.drawPrimative(
           graphics.translatePrimitive(
             graphics.rotatePrimitive(
-              graphics.scalePrimitive(this.triangle, { x: 10, y: 10 }),
+              graphics.scalePrimitive(this.triangle, {
+                x: this.boid_size,
+                y: this.boid_size,
+              }),
               th
             ),
             boid.pos
-          )
+          ),
+          boid.color
         );
-        if (boid.debug) {
-          this.drawCircle(boid.pos, this.vision_dist, "#ff0000");
-          this.drawCircle(boid.pos, this.collision_dist, "#0000ff");
-          this.drawCircle(boid.com, 10, "#ff0000");
-          for(const pos of boid.seen){
-            this.drawLine(pos, boid.pos);
-          }
+      }
+      if (this.boids[0].debug) {
+        const boid = this.boids[0];
+        // this.drawCircle(boid.pos, this.vision_dist, "#ff0000");
+        this.drawCircle(boid.pos, this.collision_dist, "#0000ff");
+        if (boid.seen.length > 0) this.fillCircle(boid.com, 7, "#ff0000");
+        if (boid.seen.length > 0) this.drawCircle(boid.com, 7, "#000");
+        this.drawFOV(
+          boid.pos,
+          this.vision_dist,
+          boid.vel,
+          this.field_of_view,
+          "#1f823f"
+        );
+        for (const pos of boid.seen) {
+          const x = pos.x - boid.pos.x;
+          const y = pos.y - boid.pos.y;
+          const d = Math.sqrt(x * x + y * y);
+          if (d < this.vision_dist) this.drawLine(pos, boid.pos);
         }
       }
     },
@@ -305,57 +381,109 @@ export default {
       this.render();
       if (this.boids.length < this.num_boids) {
         const more = this.num_boids - this.boids.length;
+        const cs = maths.linear_spaced_array(100, 255, more);
         for (let i = 0; i < more; ++i) {
           this.boids.push({
             pos: { x: 100, y: 100 },
             vel: maths.random_vector(),
             debug: false,
+            color: `rgb(0,0,${cs[i]})`,
+            id: this.id++,
           });
         }
       }
       if (this.boids.length > this.num_boids) {
-        this.boids.splice(this.num_boids - 1);
+        this.boids.splice(this.num_boids);
       }
       requestAnimationFrame(this.loop);
     },
   },
   created() {
+    const cs = maths.linear_spaced_array(100, 255, this.num_boids);
     for (let i = 0; i < this.num_boids; ++i) {
       this.boids.push({
         pos: { x: 100, y: 100 },
         vel: maths.random_vector(),
         debug: false,
+        color: `rgb(0,0,${cs[i]})`,
+        id: this.id++,
       });
     }
     this.boids[0].debug = true;
   },
   mounted() {
     this.canvas = this.$refs.main_canvas;
-    this.context = this.$refs.main_canvas.getContext("2d");
+    this.context = this.$refs.main_canvas.getContext("2d", { alpha: false });
     requestAnimationFrame(this.loop);
   },
 };
 </script>
 
 <style lang="css" scoped>
+.container {
+  display: grid;
+  grid-template-columns: max-content auto 12%;
+  /* grid-auto-rows: 25px; */
+  grid-gap: 5px;
+  align-items: center;
+  background: #eee;
+  border-radius: 10px;
+}
+.container > label {
+  text-align: right;
+}
+.container > p {
+  text-align: left;
+}
+label {
+  margin-right: 1em;
+}
+p {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  margin-left: 1em;
+}
+.slider {
+  -webkit-appearance: none;
+  height: 5px;
+  border-radius: 10px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: 0.2s;
+  transition: opacity 0.2s;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 20%;
+  background: #4caf50;
+  cursor: pointer;
+}
+.slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 20%;
+  background: #4caf50;
+  cursor: pointer;
+}
+.slider:hover {
+  opacity: 1;
+}
+.box {
+  height: 100%;
+}
+.bar {
+  background: darkgray;
+  height: 2px;
+}
 canvas {
-  width: 100%;
+  max-width: 100%;
   height: auto;
 }
-p {
-  display: inline;
-}
-.container {
-  display: flex;
-  align-items: center;
-  align-content: stretch;
-  flex-wrap: wrap;
-}
-.item {
-  flex-basis: 100%;
-}
-label,
-p {
-  margin: 1em;
+.right {
+  text-align: right;
 }
 </style>
