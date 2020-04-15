@@ -78,6 +78,9 @@
           v-model="collision_dist"
         />
         <p>{{ collision_dist }}</p>
+        <label for="draw_debug">Draw Vision Lines</label>
+        <input id="draw_debug" type="checkbox" v-model="draw_debug" />
+        <p></p>
         <div class="bar" />
         <div class="bar" />
         <div class="bar" />
@@ -119,8 +122,6 @@
         />
         <p>{{ center_of_mass_align_strength }}</p>
       </div>
-      <label for="color">Background Color</label>
-      <input id="color" type="color" v-model="background_color" />
       <div class="bar m1em" />
       <div>
         <p class="left">
@@ -168,7 +169,7 @@ export default {
   name: "Boids",
   data() {
     return {
-      background_color: "#cde2e2",
+      draw_debug: true,
       id: 0,
       fps_hist: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       prevTime: performance.now(),
@@ -204,7 +205,7 @@ export default {
       this.context.save();
       this.context.setTransform(1, 0, 0, 1, 0, 0);
       // this.context.fillStyle = "#ffecc7";
-      this.context.fillStyle = this.background_color;
+      this.context.fillStyle = "#cde2e2";
       this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.restore();
     },
@@ -389,7 +390,7 @@ export default {
           boid.color
         );
       }
-      if (this.boids[0].debug) {
+      if (this.boids[0].debug && this.draw_debug) {
         const boid = this.boids[0];
         // this.drawCircle(boid.pos, this.vision_dist, "#ff0000");
         this.drawCircle(boid.pos, this.collision_dist, "#0000ff");
@@ -492,14 +493,14 @@ p {
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 15px;
+  width: 10px;
   height: 15px;
   border-radius: 20%;
   background: #577399;
   cursor: pointer;
 }
 .slider::-moz-range-thumb {
-  width: 15px;
+  width: 10px;
   height: 15px;
   border-radius: 20%;
   background: #577399;
