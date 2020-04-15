@@ -88,7 +88,7 @@
           id="collision_avoidance_strength"
           type="range"
           min="0"
-          max=".05"
+          max=".02"
           step=".001"
           class="slider"
           v-model="collision_avoidance_strength"
@@ -99,7 +99,7 @@
           id="velocity_align_strength"
           type="range"
           min="0"
-          max=".05"
+          max=".02"
           step=".001"
           class="slider"
           v-model="velocity_align_strength"
@@ -112,7 +112,7 @@
           id="center_of_mass_align_strength"
           type="range"
           min="0"
-          max=".05"
+          max=".02"
           step=".001"
           class="slider"
           v-model="center_of_mass_align_strength"
@@ -121,6 +121,42 @@
       </div>
       <label for="color">Background Color</label>
       <input id="color" type="color" v-model="background_color" />
+      <div class="bar m1em" />
+      <div>
+        <p class="left">
+          <a href="https://en.wikipedia.org/wiki/Boids">Boids</a> are an
+          artificial life program, developed by Craig Reynolds, which simulates
+          the flocking behaviour of birds. The name "boid" corresponds to a
+          shortened version of "bird-oid object", which refers to a bird-like
+          object. Boids are an example of emergent behavior; that is, the
+          complexity of Boids arises from the interaction of individual agents
+          (the boids, in this case) adhering to a set of simple rules. The rules
+          applied in the simplest Boids world are as follows:
+        </p>
+        <ul>
+          <li>
+            separation: steer to avoid crowding local flockmates
+          </li>
+          <li>
+            alignment: steer towards the average heading of local flockmates
+          </li>
+          <li>
+            cohesion: steer to move towards the average position (center of
+            mass) of local flockmates
+          </li>
+        </ul>
+        <p class="left">
+          The blue ring shows how close a flock mate has to get before collision
+          avoidance begins.
+        </p>
+        <p class="left">
+          The green region shows the field of view combined with the vision
+          distance. Any flock member inside this reigon will be used for
+          velocity alignment and center of mass alignment calculations. Red
+          lines are also drawn to these flock members.
+        </p>
+        <p class="left">The red dot is the center of mass.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -148,7 +184,7 @@ export default {
       },
       boids: [],
       boid_size: 10,
-      speed: 0.2,
+      speed: 0.45,
       num_boids: 100,
       vision_dist: 100,
       field_of_view_deg: 120,
@@ -423,11 +459,11 @@ export default {
 .container {
   display: grid;
   grid-template-columns: max-content auto 12%;
-  /* grid-auto-rows: 25px; */
   grid-gap: 5px;
   align-items: center;
   background: #eee;
   border-radius: 10px;
+  padding: 10px;
 }
 .container > label {
   text-align: right;
@@ -473,7 +509,8 @@ p {
   opacity: 1;
 }
 .box {
-  height: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 .bar {
   background: darkgray;
@@ -485,5 +522,14 @@ canvas {
 }
 .right {
   text-align: right;
+}
+.left {
+  text-align: left;
+}
+ul {
+  text-align: left;
+}
+.m1em {
+  margin: 1em;
 }
 </style>
