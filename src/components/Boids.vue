@@ -166,7 +166,7 @@ export default {
       this.context.fill();
     },
     update(dt) {
-      this.boids.forEach((boid) => {
+      for(const boid of this.boids) {
         /* --------------- */
         /* update velocity */
         /* --------------- */
@@ -174,13 +174,13 @@ export default {
         // Collision Detection
         const seen = [];
         if (boid.debug) boid.seen = [];
-        this.boids.forEach((other) => {
-          if (boid == other) return;
+        for(const other of this.boids){
+          if (boid == other) continue;
           const x = boid.pos.x - other.pos.x;
           const y = boid.pos.y - other.pos.y;
           const d = Math.sqrt(x * x + y * y);
 
-          if (d > this.vision_dist) return;
+          if (d > this.vision_dist) continue;
 
           const other_v = {
             x: other.pos.x - boid.pos.x,
@@ -189,15 +189,15 @@ export default {
           const th = maths.angle_between(other_v, boid.pos);
 
           // other boid was seen
-          if (th > this.field_of_view) return;
+          if (th > this.field_of_view) continue;
           if (boid.debug) boid.seen.push(other.pos);
 
           seen.push({ other, other_v, th, d });
-        });
+        }
 
         // Collision Avoidance
-        seen.forEach(({ other_v, th, d }) => {
-          if (d > this.collision_dist) return;
+        for(const { other_v, th, d } of seen){
+          if (d > this.collision_dist) continue;
 
           if (maths.cross_product(other_v, boid.vel) < 0) {
             boid.vel = maths.rotate_vector(
@@ -210,18 +210,18 @@ export default {
               th * dt * this.collision_avoidance_strength
             );
           }
-        });
+        }
 
         // Velocity Alignment
         const com = { x: 0, y: 0 };
         if (seen.length > 0) {
           const vel_avg = { x: 0, y: 0 };
-          seen.forEach(({ other }) => {
+          for(const {other} of seen){
             vel_avg.x += other.vel.x;
             vel_avg.y += other.vel.y;
             com.x += other.pos.x;
             com.y += other.pos.y;
-          });
+          }
 
           vel_avg.x /= seen.length;
           vel_avg.y /= seen.length;
@@ -272,11 +272,11 @@ export default {
         if (boid.pos.x < 0) boid.pos = { x: this.canvas.width, y: boid.pos.y };
         if (boid.pos.y > this.canvas.height) boid.pos = { x: boid.pos.x, y: 0 };
         if (boid.pos.y < 0) boid.pos = { x: boid.pos.x, y: this.canvas.height };
-      });
+      }
     },
     render() {
       this.clear();
-      this.boids.forEach((boid) => {
+      for(const boid of this.boids){
         const th =
           Math.atan(boid.vel.y / boid.vel.x) - (boid.vel.x < 0 ? Math.PI : 0);
         this.drawPrimative(
@@ -292,11 +292,11 @@ export default {
           this.drawCircle(boid.pos, this.vision_dist, "#ff0000");
           this.drawCircle(boid.pos, this.collision_dist, "#0000ff");
           this.drawCircle(boid.com, 10, "#ff0000");
-          boid.seen.forEach((pos) => {
+          for(const pos of boid.seen){
             this.drawLine(pos, boid.pos);
-          });
+          }
         }
-      });
+      }
     },
     loop(time) {
       const dt = time - this.prevTime;
