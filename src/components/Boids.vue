@@ -495,14 +495,14 @@ p {
   width: 15px;
   height: 15px;
   border-radius: 20%;
-  background: #4caf50;
+  background: #577399;
   cursor: pointer;
 }
 .slider::-moz-range-thumb {
   width: 15px;
   height: 15px;
   border-radius: 20%;
-  background: #4caf50;
+  background: #577399;
   cursor: pointer;
 }
 .slider:hover {
